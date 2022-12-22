@@ -1,86 +1,86 @@
-(() => {
-  window.AD_CONFIG.layer = (() => {
-    let cbs = [];
-    
-    return {
-      add: (cb) => {
-        if(cbs.includes(cb)) {
-          return false;
-        }
-        cbs.push(cb);
-        return true;
-      },
-      remove: (cb) => {
-        let index = cbs.indexOf(cb);
-        if(index === -1) {
-          return false;
-        }
-        cbs.splice(index, 1);
-        return true;
-      },
-      // trigger before layer to be closed
-      trigger: () => {
-        cbs.forEach(cb => cb());
-        cbs = [];
-      }
+(function () {
+    'use strict';
+
+    function Sky(config) {
+
     }
-  })();
 
-  const loadScript = (src) => {
-    let exists = false;
-  
-    return () => new Promise((resolve) => {
-      if(exists) return resolve();
-      // 防止没有触发下方的onload时候, 又调用此函数重复加载
-      exists = true;
-      // 开始加载
-      let script = document.createElement('script');
-      script.src = src;
-      script.type = 'text/javascript';
-      script.async = 'async';
-      script.onerror = (ev) => {
-        // 加载失败: 允许外部再次加载
-        script.remove();
-        exists = false;
-        resolve(false);
-      };
-      script.onload = () => {
-        // 加载成功: exists一直为true, 不会多次加载
-        resolve(true);
-      };
-      document.body.appendChild(script);
-    });
-  };
+    Sky.prototype.init = function () {
+        this.tocFixed();
+        this.tocActive();
+        this.backToTop();
+        this.mobileNavToggle();
+    };
 
-  const { root } = window.AD_CONFIG;
+    // make toc stay in the visible area
+    Sky.prototype.tocFixed = function () {
+        var HEADER_OFFSET = 20;
+        var $toc = $('#post-toc');
+        if ($toc.length) {
+            var minScrollTop = $toc.offset().top;
+            $(window).scroll(function () {
+                var scrollTop = $(window).scrollTop();
+                if (scrollTop < minScrollTop) {
+                    $toc.css({'position': 'absolute', 'top': minScrollTop - 70});
+                } else {
+                    $toc.css({'position': 'fixed', 'top': HEADER_OFFSET + 'px'});
+                }
+            });
+        }
+    };
 
-  // load after DOM built
-  const documentSrcs = [
-    'js/copy.js',
-    'js/layer.js',
-    'js/scroll.js',
-    'js/backTop.js',
-    'js/time.js',
-    'js/header.js',
-    'js/passage.js',
-    'js/share.js',
-    'js/reward.js',
-  ].map(item => `${root}${item}`);
+    // current toc follows the content when scrolling
+    Sky.prototype.tocActive = function () {
+        var HEADER_OFFSET = 30;
+        var $toclink = $('.toc-link');
+        var $headerlink = $('.headerlink');
 
-  // load after all srcs loaded
-  const windowSrcs = [
-    'js/leancloud.js',
-    'js/mathjax.js',
-  ].map(item => `${root}${item}`);
+        var headerlinkTop = $.map($headerlink, function (link) {
+            return $(link).offset().top;
+        });
+        $(window).scroll(function () {
+            var scrollTop = $(window).scrollTop();
+            for (var i = 0; i < $toclink.length; i++) {
+                var currentHeaderTop = headerlinkTop[i] - HEADER_OFFSET,
+                    nextHeaderTop = i + 1 === $toclink.length ? Infinity : headerlinkTop[i + 1] - HEADER_OFFSET;
 
-  const documentSrcScripts = documentSrcs.map(src => loadScript(src));
-  const windowSrcScripts = windowSrcs.map(src => loadScript(src));
+                if (currentHeaderTop < scrollTop && scrollTop <= nextHeaderTop) {
+                    $($toclink[i]).addClass('active');
+                } else {
+                    $($toclink[i]).removeClass('active');
+                }
+            }
+        });
+    };
 
-  document.addEventListener('DOMContentLoaded', () => {
-    documentSrcScripts.forEach(script => script());
-  });
+    // back to top
+    Sky.prototype.backToTop = function () {
+        var $backToTop = $('#back-to-top');
 
-  window.addEventListener('load', () => {
-    windowSrcScripts.forEach(script => script());
-  });
-})();
+        $backToTop.click(function () {
+            console.log('click');
+            $('html,body').animate({ scrollTop: 0 });
+        });
+    };
+
+    // mobile nav toggle
+    Sky.prototype.mobileNavToggle = function () {
+        var $mobileNav = $('.mobile-nav-icon'),
+            $mobileMenu = $('.mobile-menu');
+
+        $mobileNav.click(function () {
+            if (!$mobileMenu.hasClass('show-menu')) {
+                $mobileMenu.addClass('show-menu');
+                $mobileMenu.removeClass('hide-menu');
+                $mobileNav.addClass('show-menu').removeClass('hide-menu');
+            } else {
+                $mobileMenu.addClass('hide-menu');
+                $mobileMenu.removeClass('show-menu');
+                $mobileNav.removeClass('show-menu').addClass('hide-menu');
+            }
+        })
+    };
+
+    var sky = new Sky();
+    sky.init();
+})(window);
